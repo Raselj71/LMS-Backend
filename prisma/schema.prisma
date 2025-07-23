@@ -40,13 +40,13 @@ model User {
   fullName       String
   avatarUrl      String?
   bio            String?
-  phone          String?  @unique
+  phone          String?     @unique
   role           Role        @default(STUDENT)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
 
-  // Relations
+
   instructorProfile Instructor?
   studentCourses    StudentCourse[]
   payments          Payment[]
