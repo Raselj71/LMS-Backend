@@ -13,3 +13,184 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id             String      @id @default(cuid())
+  email          String      @unique
+  password       String
+  fullName       String
+  avatarUrl      String?
+  bio            String?
+  phone          String?  @unique
+  role           Role        @default(STUDENT)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+
+  // Relations
+  instructorProfile Instructor?
+  studentCourses    StudentCourse[]
+  payments          Payment[]
+  enrollments       Enrollment[]
+  liveSessions      LiveSessionParticipant[]
+  certificates      Certificate[]
+
+}
+
+model Instructor {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  expertise String?
+  approved  Boolean  @default(false)
+  rating    Float    @default(0)
+
+  user      User     @relation(fields: [userId], references: [id])
+  courses   Course[]
+}
+
+model Course {
+  id             String        @id @default(cuid())
+  title          String
+  description    String
+  thumbnailUrl   String?
+  price          Float
+  status         CourseStatus  @default(DRAFT)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  instructorId   String
+
+  instructor     Instructor    @relation(fields: [instructorId], references: [id])
+  sections       Section[]
+  enrollments    Enrollment[]
+  quizzes        Quiz[]
+  liveSessions   LiveSession[]
+  studentCourses StudentCourse[]
+  payments       Payment[]
+  certificates   Certificate[]
+}
+
+model Section {
+  id        String     @id @default(cuid())
+  title     String
+  courseId  String
+
+  course    Course     @relation(fields: [courseId], references: [id])
+  lessons   Lesson[]
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  videoUrl    String?
+  duration    Int?
+  content     String?
+  sectionId   String
+
+  section     Section    @relation(fields: [sectionId], references: [id])
+}
+
+model Quiz {
+  id        String    @id @default(cuid())
+  question  String
+  options   String[] // ["A", "B", "C", "D"]
+  answer    String    // "A"
+  courseId  String
+
+  course    Course    @relation(fields: [courseId], references: [id])
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  courseId   String
+  userId     String
+  enrolledAt DateTime @default(now())
+
+  course     Course   @relation(fields: [courseId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model StudentCourse {
+  id         String    @id @default(cuid())
+  userId     String
+  courseId   String
+  progress   Float     @default(0)
+
+  user       User      @relation(fields: [userId], references: [id])
+  course     Course    @relation(fields: [courseId], references: [id])
+}
+
+model Payment {
+  id            String         @id @default(cuid())
+  userId        String
+  courseId      String
+  amount        Float
+  status        PaymentStatus  @default(PENDING)
+  transactionId String?
+  paidAt        DateTime?
+
+  user          User           @relation(fields: [userId], references: [id])
+  course        Course         @relation(fields: [courseId], references: [id])
+}
+
+model LiveSession {
+  id          String     @id @default(cuid())
+  courseId    String
+  title       String
+  startTime   DateTime
+  endTime     DateTime?
+  roomUrl     String
+
+  course      Course     @relation(fields: [courseId], references: [id])
+  participants LiveSessionParticipant[]
+}
+
+model LiveSessionParticipant {
+  id             String   @id @default(cuid())
+  sessionId      String
+  userId         String
+  joinedAt       DateTime @default(now())
+
+  liveSession    LiveSession @relation(fields: [sessionId], references: [id])
+  user           User        @relation(fields: [userId], references: [id])
+}
+
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  discount    Float
+  expiresAt   DateTime
+  usageLimit  Int
+  usedCount   Int       @default(0)
+}
+
+model Certificate {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  issuedAt   DateTime @default(now())
+  pdfUrl     String
+
+  user       User     @relation(fields: [userId], references: [id])
+  course     Course   @relation(fields: [courseId], references: [id])
+}
